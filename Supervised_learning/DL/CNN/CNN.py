@@ -93,13 +93,19 @@ class CNN(nn.Module):
 		# return (x > thresh).type(torch.int).reshape(-1)
 
 
-	def train_model(self, X, y, epochs=1000, learning_rate=.001):
-		if not isinstance(y, torch.Tensor):
+	def train_model(self, X=None, y=None, train_dataloader=None, epochs=1000, learning_rate=.001):
+		if (X is None) and (train_dataloader is None):
+			raise Exception("Need either X or train_dataloader to not be None.")
+
+		if (y is not None) and (not isinstance(y, torch.Tensor)):
 			y = torch.tensor(y, dtype=torch.float)
 			y = y.reshape(-1, 1)
 			# oh = torch.zeros((*y.shape, 2))
 			# oh[:, y] = 1
 			# y = oh.type(torch.float)
+
+		if train_dataloader is None:
+			train_dataloader = zip(X, y)
 
 		criterion = nn.CrossEntropyLoss()  # works best with softmax
 		# criterion = nn.NLLLoss()
@@ -109,7 +115,11 @@ class CNN(nn.Module):
 		self.train()  # sets the module in training mode
 		for epoch in range(epochs):
 
-			for i, (x_batch, y_batch) in enumerate(dataloader):
+			for i, (x_batch, y_batch) in enumerate(train_dataloader):
+				if torch.cuda.is_available():
+					x_batch = x_batch.cuda()
+					y_batch = y_batch.cuda()
+
 				o = self(x_batch)
 				loss = criterion(o, y_batch)
 
@@ -117,12 +127,18 @@ class CNN(nn.Module):
 				loss.backward()
 				optimizer.step()
 
+				if torch.cuda.is_available():
+					del x_batch
+					del y_batch
+					del o
+					torch.cuda.empty_cache()
+
 			if epoch % 100 == 0:
 				print(f"{epoch} - loss: {loss}")
 
 		self.eval()  # sets the module in evaluation mode
 
-	def eval_model(self, X, y):
+	def eval_model(self, X=None, y=None, test_dataloader=None):
 		y_hat = self.predict(X)
 		print(f"accuracy {accuracy_score(y, y_hat)}")
 		print(f"precision {precision_score(y, y_hat)}")
