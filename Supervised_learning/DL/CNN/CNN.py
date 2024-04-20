@@ -138,8 +138,28 @@ class CNN(nn.Module):
 
 		self.eval()  # sets the module in evaluation mode
 
+	def extract_y(self, dataloader):
+		y = []
+		y_hat = []
+
+		with torch.no_grad():  # in evaluation there's no need to calculate the gradients, so we disable it.
+			for input, target in dataloader:
+				pred = self.predict(input)
+
+				y_hat.extend(pred)
+				y.extend(target)
+		
+		y = np.array(y)
+		y_hat = np.array(y_hat)
+		return y, y_hat
+
 	def eval_model(self, X=None, y=None, test_dataloader=None):
-		y_hat = self.predict(X)
+		self.eval()
+		if (X is None) and (y is None):
+			y, y_hat = self.extract_y(test_dataloader)	
+		else:
+			y_hat = self.predict(X)
+
 		print(f"accuracy {accuracy_score(y, y_hat)}")
 		print(f"precision {precision_score(y, y_hat)}")
 		print(f"recall {recall_score(y, y_hat)}")

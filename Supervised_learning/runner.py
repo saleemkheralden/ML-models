@@ -51,7 +51,7 @@ def run_cnn():
         device = torch.device('cpu')
 
 
-    cnn.train_model(train_dataloader=train_dataloader)
+    cnn.train_model(train_dataloader=train_dataloader, epochs=1)
     cnn.eval_model(test_dataloader=test_dataloader)
     print(X_test.shape, Y_test.shape)
 

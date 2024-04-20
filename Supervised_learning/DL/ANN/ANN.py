@@ -58,6 +58,7 @@ class ANN(nn.Module):
         self.eval()  # sets the module in evaluation mode
 
     def eval_model(self, X, y):
+        self.eval()
         y_hat = self.predict(X)
         print(f"accuracy {accuracy_score(y, y_hat)}")
         print(f"precision {precision_score(y, y_hat)}")
