@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 import torchvision.datasets as vset
 import torchvision.transforms as transforms
 
+import numpy as np
+
 # Before defining the CNN let's load the dataset for the train in the CNN class
 # We'll load CIFAR10 dataset
 # First thing we need the transforms, vset and DataLoader modules
@@ -38,10 +40,11 @@ dataloader = DataLoader(dataset=dataset, batch_size=20, shuffle=True)
 
 # Now let's define a CNN
 class CNN(nn.Module):
-	def __init__(self, out_features=10):
+	def __init__(self, x, out_features=10):
 		super(CNN, self).__init__()
+		channels = x.shape[0] if len(x.shape) == 3 else x.shape[1]
 		self.layer1 = nn.Sequential(
-			nn.Conv2d(3, 16, kernel_size=5, stride=2, padding=2),
+			nn.Conv2d(channels, 16, kernel_size=5, stride=2, padding=2),
 			nn.BatchNorm2d(16),
 			nn.ReLU(),
 			nn.MaxPool2d(2))  # 3 x 32 x 32 -> 16 x 8 x 8
@@ -65,19 +68,25 @@ class CNN(nn.Module):
 			nn.BatchNorm2d(50),
 			nn.ReLU())  # 40 x 4 x 4 -> 50 x 4 x 4
 
-		self.fc1 = nn.Linear(4 * 4 * 50, 15)  # 4 * 4 * 50 -> 15
+		# self.fc1 = nn.Linear(4 * 4 * 50, 15)  # 4 * 4 * 50 -> 15
+		self.fc1 = nn.Linear(self.encode(x).shape[1], 15)
 		self.dropout = nn.Dropout(p=0.5)
 		self.fc2 = nn.Linear(15, out_features)  # 15 -> 10
 		self.logsoftmax = nn.LogSoftmax(dim=1)
 		self.softmax = nn.Softmax(dim=1)
 
-	def forward(self, x):
+	def encode(self, x):
 		out = self.layer1(x)
 		out = self.layer2(out)
 		out = self.dropout1(out)
 		out = self.layer3(out)
 		out = self.layer4(out)
 		out = out.view(out.size(0), -1)
+		return out
+
+	def forward(self, x):
+		out = self.encode(x)
+		
 		out = self.fc1(out)
 		out = nn.functional.relu(out)
 		out = self.dropout(out)
@@ -133,8 +142,8 @@ class CNN(nn.Module):
 					del o
 					torch.cuda.empty_cache()
 
-			if epoch % 100 == 0:
-				print(f"{epoch} - loss: {loss}")
+			# if epoch % (epochs / 10) == 0:
+			print(f"{epoch} - loss: {loss}")
 
 		self.eval()  # sets the module in evaluation mode
 
@@ -166,8 +175,34 @@ class CNN(nn.Module):
 		print(f"confusion matrix \n {confusion_matrix(y, y_hat)}")
 
 
+# If i have a dataset in my folder instead of dataset from pytorch i can import it as follows
+
+# from torch.utils.data import DataLoader
+# from torchvision import datasets, transforms
+# from torchvision.datasets import ImageFolder
+
+# transform = transforms.Compose([
+#     transforms.Resize((128, 128)),  # Resize images to 128x128 pixels
+#     transforms.ToTensor(),  # Convert images to PyTorch tensors
+#     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize with mean and std for pre-trained models
+# ])
 
 
+# data_dir = 'Supervised_learning/dataset/training_set'
+# val_dir = 'Supervised_learning/dataset/training_set'
+
+
+# dataset = ImageFolder(root=data_dir, transform=transform)
+# val_dataset = ImageFolder(root=val_dir, transform=transform)
+
+# batch_size = 128
+# dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+# val_dataloader = DataLoader(val_dataset, batch_size, shuffle=True)
+
+# cnn = CNN(next(iter(dataloader))[0][:1], out_features=2)
+
+# cnn.train_model(train_dataloader=dataloader, epochs=20)
+# cnn.eval_model(test_dataloader=val_dataloader)
 
 
 
